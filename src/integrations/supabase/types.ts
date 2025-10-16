@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          icon: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -40,6 +75,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          category_id: string | null
           completed: boolean
           created_at: string
           description: string | null
@@ -47,11 +83,13 @@ export type Database = {
           id: string
           priority: string | null
           reminder_sent: boolean | null
+          status: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          category_id?: string | null
           completed?: boolean
           created_at?: string
           description?: string | null
@@ -59,11 +97,13 @@ export type Database = {
           id?: string
           priority?: string | null
           reminder_sent?: boolean | null
+          status?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          category_id?: string | null
           completed?: boolean
           created_at?: string
           description?: string | null
@@ -71,11 +111,19 @@ export type Database = {
           id?: string
           priority?: string | null
           reminder_sent?: boolean | null
+          status?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_user_id_fkey"
             columns: ["user_id"]

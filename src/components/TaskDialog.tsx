@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Task {
   id: string;
@@ -18,6 +19,15 @@ interface Task {
   completed: boolean;
   priority: "low" | "medium" | "high";
   due_date: string | null;
+  status: "pending" | "in_progress" | "completed";
+  category_id: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
 }
 
 interface TaskDialogProps {
@@ -33,16 +43,24 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps
     description: "",
     priority: "medium" as "low" | "medium" | "high",
     due_date: undefined as Date | undefined,
+    status: "pending" as "pending" | "in_progress" | "completed",
+    category_id: null as string | null,
   });
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (open) {
+      fetchCategories();
+    }
     if (task) {
       setFormData({
         title: task.title,
         description: task.description || "",
         priority: task.priority,
         due_date: task.due_date ? new Date(task.due_date) : undefined,
+        status: task.status,
+        category_id: task.category_id,
       });
     } else {
       setFormData({
@@ -50,9 +68,19 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps
         description: "",
         priority: "medium",
         due_date: undefined,
+        status: "pending",
+        category_id: null,
       });
     }
   }, [task, open]);
+
+  const fetchCategories = async () => {
+    const { data } = await supabase
+      .from("categories")
+      .select("*")
+      .order("created_at", { ascending: true });
+    setCategories(data || []);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +92,8 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps
       description: formData.description || null,
       priority: formData.priority,
       due_date: formData.due_date ? formData.due_date.toISOString() : null,
+      status: formData.status,
+      category_id: formData.category_id,
     });
 
     setLoading(false);
@@ -120,6 +150,27 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="status">Estado</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value: "pending" | "in_progress" | "completed") =>
+                  setFormData({ ...formData, status: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pendiente</SelectItem>
+                  <SelectItem value="in_progress">En Proceso</SelectItem>
+                  <SelectItem value="completed">Completada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label>Fecha límite</Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -145,6 +196,28 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoría</Label>
+              <Select
+                value={formData.category_id || "none"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, category_id: value === "none" ? null : value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin categoría</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

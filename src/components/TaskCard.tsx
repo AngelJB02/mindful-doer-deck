@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Trash2, Edit, Clock } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -15,6 +16,13 @@ interface Task {
   priority: "low" | "medium" | "high";
   due_date: string | null;
   created_at: string;
+  status: "pending" | "in_progress" | "completed";
+  category_id: string | null;
+  categories?: {
+    name: string;
+    color: string;
+    icon: string;
+  } | null;
 }
 
 interface TaskCardProps {
@@ -36,12 +44,29 @@ const priorityLabels = {
   high: "Alta",
 };
 
+const statusColors = {
+  pending: "bg-muted text-muted-foreground",
+  in_progress: "bg-primary/20 text-primary-foreground border-primary/30",
+  completed: "bg-success/20 text-success-foreground border-success/30",
+};
+
+const statusLabels = {
+  pending: "Pendiente",
+  in_progress: "En Proceso",
+  completed: "Completada",
+};
+
 export const TaskCard = ({ task, onToggleComplete, onDelete, onEdit }: TaskCardProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
     await onDelete(task.id);
+  };
+
+  const getIconComponent = (iconName: string) => {
+    const Icon = (LucideIcons as any)[iconName] || LucideIcons.Tag;
+    return <Icon className="w-3 h-3" />;
   };
 
   return (
@@ -64,6 +89,22 @@ export const TaskCard = ({ task, onToggleComplete, onDelete, onEdit }: TaskCardP
               <Badge variant="outline" className={priorityColors[task.priority]}>
                 {priorityLabels[task.priority]}
               </Badge>
+              <Badge variant="outline" className={statusColors[task.status]}>
+                {statusLabels[task.status]}
+              </Badge>
+              {task.categories && (
+                <Badge 
+                  variant="outline" 
+                  className="border-2"
+                  style={{ 
+                    borderColor: task.categories.color,
+                    color: task.categories.color 
+                  }}
+                >
+                  <span className="mr-1">{getIconComponent(task.categories.icon)}</span>
+                  {task.categories.name}
+                </Badge>
+              )}
               {task.due_date && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Calendar className="w-3 h-3" />

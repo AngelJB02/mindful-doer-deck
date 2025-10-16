@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog } from "@/components/TaskDialog";
+import { CategoryManager } from "@/components/CategoryManager";
 import { StatsCard } from "@/components/StatsCard";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, LogOut, CheckCircle, Clock, TrendingUp, ListTodo } from "lucide-react";
+import { Plus, LogOut, CheckCircle, Clock, TrendingUp, ListTodo, FolderKanban } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Task {
@@ -17,6 +18,13 @@ interface Task {
   priority: "low" | "medium" | "high";
   due_date: string | null;
   created_at: string;
+  status: "pending" | "in_progress" | "completed";
+  category_id: string | null;
+  categories?: {
+    name: string;
+    color: string;
+    icon: string;
+  } | null;
 }
 
 const Dashboard = () => {
@@ -25,6 +33,7 @@ const Dashboard = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   useEffect(() => {
@@ -37,7 +46,14 @@ const Dashboard = () => {
   const fetchTasks = async () => {
     const { data, error } = await supabase
       .from("tasks")
-      .select("*")
+      .select(`
+        *,
+        categories (
+          name,
+          color,
+          icon
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -99,6 +115,8 @@ const Dashboard = () => {
           description: taskData.description,
           priority: taskData.priority,
           due_date: taskData.due_date,
+          status: taskData.status,
+          category_id: taskData.category_id,
           user_id: user?.id,
         },
       ]);
@@ -158,15 +176,17 @@ const Dashboard = () => {
 
   const stats = {
     total: tasks.length,
-    completed: tasks.filter((t) => t.completed).length,
-    pending: tasks.filter((t) => !t.completed).length,
+    completed: tasks.filter((t) => t.status === "completed").length,
+    inProgress: tasks.filter((t) => t.status === "in_progress").length,
+    pending: tasks.filter((t) => t.status === "pending").length,
     completionRate: tasks.length > 0 
-      ? Math.round((tasks.filter((t) => t.completed).length / tasks.length) * 100)
+      ? Math.round((tasks.filter((t) => t.status === "completed").length / tasks.length) * 100)
       : 0,
   };
 
-  const pendingTasks = tasks.filter((t) => !t.completed);
-  const completedTasks = tasks.filter((t) => t.completed);
+  const pendingTasks = tasks.filter((t) => t.status === "pending");
+  const inProgressTasks = tasks.filter((t) => t.status === "in_progress");
+  const completedTasks = tasks.filter((t) => t.status === "completed");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -207,10 +227,10 @@ const Dashboard = () => {
             gradient="bg-gradient-success"
           />
           <StatsCard
-            title="Pendientes"
-            value={stats.pending}
+            title="En Proceso"
+            value={stats.inProgress}
             icon={Clock}
-            description={`${stats.pending} tareas por hacer`}
+            description={`${stats.inProgress} en progreso`}
           />
           <StatsCard
             title="Tasa de Cumplimiento"
@@ -223,15 +243,24 @@ const Dashboard = () => {
         {/* Actions */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Mis Tareas</h2>
-          <Button
-            onClick={() => {
-              setEditingTask(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Tarea
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCategoryDialogOpen(true)}
+            >
+              <FolderKanban className="w-4 h-4 mr-2" />
+              Categorías
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingTask(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Tarea
+            </Button>
+          </div>
         </div>
 
         {/* Tasks */}
@@ -241,9 +270,12 @@ const Dashboard = () => {
           </div>
         ) : (
           <Tabs defaultValue="pending" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="pending">
                 Pendientes ({pendingTasks.length})
+              </TabsTrigger>
+              <TabsTrigger value="in_progress">
+                En Proceso ({inProgressTasks.length})
               </TabsTrigger>
               <TabsTrigger value="completed">
                 Completadas ({completedTasks.length})
@@ -261,6 +293,29 @@ const Dashboard = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {pendingTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onToggleComplete={handleToggleComplete}
+                      onDelete={handleDeleteTask}
+                      onEdit={handleEditTask}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="in_progress" className="mt-6">
+              {inProgressTasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <Clock className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    No tienes tareas en proceso.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {inProgressTasks.map((task) => (
                     <TaskCard
                       key={task.id}
                       task={task}
@@ -304,6 +359,12 @@ const Dashboard = () => {
         onOpenChange={setDialogOpen}
         onSave={handleSaveTask}
         task={editingTask}
+      />
+
+      <CategoryManager
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        onCategoriesChange={fetchTasks}
       />
     </div>
   );
