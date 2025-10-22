@@ -77,7 +77,7 @@ const Auth = () => {
               <ListTodo className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              TaskFlow
+              PLANIO
             </h1>
           </div>
           
