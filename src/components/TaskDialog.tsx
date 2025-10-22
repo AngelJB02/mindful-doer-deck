@@ -21,6 +21,7 @@ interface Task {
   due_date: string | null;
   status: "pending" | "in_progress" | "completed";
   category_id: string | null;
+  project_id: string;
 }
 
 interface Category {
@@ -35,16 +36,17 @@ interface TaskDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (task: Partial<Task>) => Promise<void>;
   task?: Task | null;
+  projectId: string;
 }
 
-export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps) => {
+export const TaskDialog = ({ open, onOpenChange, onSave, task, projectId }: TaskDialogProps) => {
   const [formData, setFormData] = useState({
+    category_id: null as string | null,
     title: "",
     description: "",
     priority: "medium" as "low" | "medium" | "high",
     due_date: undefined as Date | undefined,
     status: "pending" as "pending" | "in_progress" | "completed",
-    category_id: null as string | null,
   });
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,21 +57,21 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps
     }
     if (task) {
       setFormData({
+        category_id: task.category_id,
         title: task.title,
         description: task.description || "",
         priority: task.priority,
         due_date: task.due_date ? new Date(task.due_date) : undefined,
         status: task.status,
-        category_id: task.category_id,
       });
     } else {
       setFormData({
+        category_id: null,
         title: "",
         description: "",
         priority: "medium",
         due_date: undefined,
         status: "pending",
-        category_id: null,
       });
     }
   }, [task, open]);
@@ -88,12 +90,13 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps
 
     await onSave({
       ...(task && { id: task.id }),
+      category_id: formData.category_id,
       title: formData.title,
       description: formData.description || null,
       priority: formData.priority,
       due_date: formData.due_date ? formData.due_date.toISOString() : null,
       status: formData.status,
-      category_id: formData.category_id,
+      project_id: projectId,
     });
 
     setLoading(false);
@@ -107,6 +110,28 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps
           <DialogTitle>{task ? "Editar Tarea" : "Nueva Tarea"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="category">Categoría</Label>
+            <Select
+              value={formData.category_id || "none"}
+              onValueChange={(value) =>
+                setFormData({ ...formData, category_id: value === "none" ? null : value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sin categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin categoría</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title">Título *</Label>
             <Input
@@ -169,56 +194,32 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task }: TaskDialogProps
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Fecha límite</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.due_date ? (
-                      format(formData.due_date, "d 'de' MMM", { locale: es })
-                    ) : (
-                      <span>Seleccionar</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.due_date}
-                    onSelect={(date) => setFormData({ ...formData, due_date: date })}
-                    locale={es}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="category">Categoría</Label>
-              <Select
-                value={formData.category_id || "none"}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, category_id: value === "none" ? null : value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sin categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin categoría</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Fecha límite</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.due_date ? (
+                    format(formData.due_date, "d 'de' MMM", { locale: es })
+                  ) : (
+                    <span>Seleccionar</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.due_date}
+                  onSelect={(date) => setFormData({ ...formData, due_date: date })}
+                  locale={es}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <DialogFooter>

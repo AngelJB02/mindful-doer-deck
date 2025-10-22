@@ -73,6 +73,44 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           category_id: string | null
@@ -82,6 +120,7 @@ export type Database = {
           due_date: string | null
           id: string
           priority: string | null
+          project_id: string
           reminder_sent: boolean | null
           status: string | null
           title: string
@@ -96,6 +135,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string | null
+          project_id: string
           reminder_sent?: boolean | null
           status?: string | null
           title: string
@@ -110,6 +150,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string | null
+          project_id?: string
           reminder_sent?: boolean | null
           status?: string | null
           title?: string
@@ -122,6 +163,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
