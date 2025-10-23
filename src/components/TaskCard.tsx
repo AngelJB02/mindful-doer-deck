@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Trash2, Edit, Clock } from "lucide-react";
+import { Calendar, Trash2, Edit, Clock, Bell, BellOff } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -18,6 +18,8 @@ interface Task {
   created_at: string;
   status: "pending" | "in_progress" | "completed";
   category_id: string | null;
+  reminder_enabled?: boolean;
+  reminder_sent?: boolean;
   categories?: {
     name: string;
     color: string;
@@ -110,6 +112,21 @@ export const TaskCard = ({ task, onToggleComplete, onDelete, onEdit }: TaskCardP
                   <Calendar className="w-3 h-3" />
                   {format(new Date(task.due_date), "d 'de' MMMM, yyyy", { locale: es })}
                 </div>
+              )}
+              {task.reminder_enabled && (
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                  {task.reminder_sent ? (
+                    <>
+                      <BellOff className="w-3 h-3 mr-1" />
+                      Recordatorio enviado
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="w-3 h-3 mr-1" />
+                      Recordatorio activo
+                    </>
+                  )}
+                </Badge>
               )}
             </div>
           </div>

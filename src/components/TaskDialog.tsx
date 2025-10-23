@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { CalendarIcon, Bell } from "lucide-react";
+import { format, subDays, subHours } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +23,8 @@ interface Task {
   status: "pending" | "in_progress" | "completed";
   category_id: string | null;
   project_id: string;
+  reminder_enabled?: boolean;
+  reminder_time?: string | null;
 }
 
 interface Category {
@@ -47,6 +50,8 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task, projectId }: Task
     priority: "medium" as "low" | "medium" | "high",
     due_date: undefined as Date | undefined,
     status: "pending" as "pending" | "in_progress" | "completed",
+    reminder_enabled: false,
+    reminder_offset: "1_day" as "1_day" | "1_hour" | "at_time",
   });
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,6 +68,8 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task, projectId }: Task
         priority: task.priority,
         due_date: task.due_date ? new Date(task.due_date) : undefined,
         status: task.status,
+        reminder_enabled: task.reminder_enabled || false,
+        reminder_offset: "1_day",
       });
     } else {
       setFormData({
@@ -72,6 +79,8 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task, projectId }: Task
         priority: "medium",
         due_date: undefined,
         status: "pending",
+        reminder_enabled: false,
+        reminder_offset: "1_day",
       });
     }
   }, [task, open]);
@@ -82,6 +91,23 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task, projectId }: Task
       .select("*")
       .order("created_at", { ascending: true });
     setCategories(data || []);
+  };
+
+  const calculateReminderTime = (): string | null => {
+    if (!formData.due_date || !formData.reminder_enabled) return null;
+    
+    const dueDate = new Date(formData.due_date);
+    
+    switch (formData.reminder_offset) {
+      case "1_day":
+        return subDays(dueDate, 1).toISOString();
+      case "1_hour":
+        return subHours(dueDate, 1).toISOString();
+      case "at_time":
+        return dueDate.toISOString();
+      default:
+        return null;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,6 +123,8 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task, projectId }: Task
       due_date: formData.due_date ? formData.due_date.toISOString() : null,
       status: formData.status,
       project_id: projectId,
+      reminder_enabled: formData.reminder_enabled,
+      reminder_time: calculateReminderTime(),
     });
 
     setLoading(false);
@@ -221,6 +249,47 @@ export const TaskDialog = ({ open, onOpenChange, onSave, task, projectId }: Task
               </PopoverContent>
             </Popover>
           </div>
+
+          {formData.due_date && (
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-primary" />
+                  <Label htmlFor="reminder" className="cursor-pointer">
+                    Activar recordatorio
+                  </Label>
+                </div>
+                <Switch
+                  id="reminder"
+                  checked={formData.reminder_enabled}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, reminder_enabled: checked })
+                  }
+                />
+              </div>
+              
+              {formData.reminder_enabled && (
+                <div className="space-y-2">
+                  <Label htmlFor="reminder-offset">¿Cuándo deseas recibirlo?</Label>
+                  <Select
+                    value={formData.reminder_offset}
+                    onValueChange={(value: "1_day" | "1_hour" | "at_time") =>
+                      setFormData({ ...formData, reminder_offset: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1_day">1 día antes</SelectItem>
+                      <SelectItem value="1_hour">1 hora antes</SelectItem>
+                      <SelectItem value="at_time">En el momento de la fecha límite</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

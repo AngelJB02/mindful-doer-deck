@@ -22,6 +22,9 @@ interface Task {
   status: "pending" | "in_progress" | "completed";
   category_id: string | null;
   project_id: string;
+  reminder_enabled?: boolean;
+  reminder_time?: string | null;
+  reminder_sent?: boolean;
   categories?: {
     name: string;
     color: string;
